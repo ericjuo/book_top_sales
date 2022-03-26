@@ -14,3 +14,33 @@
 
 - [] Publish to a webpage (through github)
 
+
+
+## Enviroment
+```
+$ conda create --name books
+```
+environment location: /home/ericjuo/miniconda3/envs/books
+
+## Software
+Python
+```
+$ python --version
+Python 3.10.0
+```
+BeautifulSoup4
+```
+import requests
+print(requests.__version__)
+
+2.27.1
+```
+Selenium
+```
+import selenium
+print(selenium.__version__)
+
+3.141.0
+```
+
+
