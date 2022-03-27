@@ -28,7 +28,7 @@ jobs:
       - name: setup python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.10.7'
+          python-version: '3.10.0'
 
       # Runs a set of commands using the runners shell
       - name: install python packages
