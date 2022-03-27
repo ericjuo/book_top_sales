@@ -18,7 +18,7 @@ else:
     rank_month = today.month -1
     rank_year = today.year
 
-with open("../README.md", 'w') as f:
+with open("../../README.md", 'w') as f:
     f.write("# 台灣暢銷書排行榜  \n")
     f.write("## %s年%s月排行榜  \n" % (rank_year, rank_month))
     f.write("Updated on %s  \n" % today.strftime("%Y-%m-%d"))
