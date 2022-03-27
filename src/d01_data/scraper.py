@@ -7,6 +7,9 @@ from selenium.webdriver.chrome.options import Options
 from datetime import date
 import re
 from collections import defaultdict
+import sqlite3
+import pandas as pd
+import numpy as np
     
 def extract_html(url, method) -> BeautifulSoup:
     if method == "requests":
@@ -17,9 +20,14 @@ def extract_html(url, method) -> BeautifulSoup:
         return bs4.BeautifulSoup(r.text, "html.parser")
     elif method == "selenium":
         chrome_options = Options() 
+        chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument('--headless')
-        driver = webdriver.Chrome("../d00_utils/chromedriver")
-        driver.get(url)
+        driver = webdriver.Chrome("../d00_utils/chromedriver", options=chrome_options)
+        try:
+            driver.get(url)
+        except:
+            print('Fail to connect to %s' % url)
+            return
         html = driver.page_source
         driver.quit()
         return bs4.BeautifulSoup(html, "html.parser")
@@ -35,6 +43,7 @@ def books_scraper() -> Dict:
     top_ten = defaultdict(list)
     rank = 1
     for b in books:
+        top_ten['store'].append("books")
         top_ten['rank'].append(rank)
         top_ten['name'].append(b.h4.a.string)
         top_ten['price'].append(int(b.find_all('b')[1].string))
@@ -58,6 +67,7 @@ def kingstone_scraper() -> Dict:
     topten = defaultdict(list)
     rank = 1
     for b in books:
+        topten['store'].append("kingstone")
         topten['rank'].append(rank)
         topten['name'].append(b.find_all("a")[1].string)
         topten['price'].append(int(b.find_all("b")[1].string))
@@ -74,6 +84,7 @@ def cite_scraper() -> Dict:
     topten = defaultdict(list)
     rank = 1
     for b in books:
+        topten['store'].append("cite")
         topten['rank'].append(rank)
         topten['name'].append(b.h3.a.string)
         topten['price'].append(int(pattern.search(str(b.find(class_="red"))).group(0)))
@@ -91,6 +102,7 @@ def sanmin_scraper() -> Dict:
     pattern = re.compile(r'(\d+)\.(.+)')
     rank = 1
     for b in books:
+        topten["store"].append("sanmin")
         topten['rank'].append(rank)
         topten['name'].append(pattern.search(str(b.h3.a.string)).group(2))
         topten['price'].append(int(b.span.find(style="color: red; font-size: 20px").string))
@@ -107,6 +119,7 @@ def tcsb_scraper() -> Dict:
     topten = defaultdict(list)
     rank =1
     for b in books:
+        topten['store'].append("tcsb")
         topten['rank'].append(rank)
         topten['name'].append(b.find(class_="sc-fzXfNO cjNSCe").string)
         topten['price'].append(int(pattern.search(str(b.find(class_="sc-fzXfNR bsRQkb").string)).group(1)))
@@ -122,9 +135,30 @@ def taaze_scraper() -> Dict:
     books = soup.find_all(class_="bookGridByListView")[:10]
     rank = 1
     for b in books:
+        topten['store'].append("taaze")
         topten['rank'].append(rank)
         topten['name'].append(b.find_all("a")[1].string)
         topten['price'].append(int(b.find_all("span")[1].string))
         topten['url'].append("https://www.taaze.tw/" + books[0].find_all("a")[1].get("href"))
         rank += 1
     return topten
+
+# Create SQL db
+def create_topsales_db():
+    df_list = [pd.DataFrame(i) for i in [books_scraper(), kingstone_scraper(), sanmin_scraper(), cite_scraper(), taaze_scraper(), tcsb_scraper()]]
+    df = pd.concat(df_list, axis=0, ignore_index=True)
+    sqlite3.register_adapter(np.int64, lambda val: int(val))
+    sqlite3.register_adapter(np.int32, lambda val: int(val))
+    conn = sqlite3.connect("../../data/03_processed/top_sales_books.db")
+    curs = conn.cursor()
+    curs.execute("drop table topsales")
+    curs.execute("create table topsales (Store, Rank, Name, Price, Link)")
+    for i in range(len(df)):
+        curs.execute("insert into topsales values (?, ?, ?, ?, ?)", df.iloc[i])
+
+    conn.commit()
+    conn.close()
+
+
+if __name__ == "__main__":
+    create_topsales_db()
